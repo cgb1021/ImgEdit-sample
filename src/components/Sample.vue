@@ -2,22 +2,28 @@
   <div class="img-edit">
     <h1>ImgEdit sample</h1>
     <div id="draw_range">
-    <canvas id="canvas"></canvas>
+      <canvas id="canvas"></canvas>
       <form action="">
         <input type="file" name="" multiple accept="image/*" id="file_input">
       </form>
+      <div class="info">width: height:</div>
+      <div class="tools"><Btn text="预览" @click.native="preview"/></div>
     </div>
   </div>
 </template>
 
 <script>
+import ImgEdit, { readFile, loadImg } from 'imgedit'
+import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
-import ImgEdit from 'imgedit'
+import Btn from './Btn'
 let edit
 export default {
-  name: 'Sample',
+  name: 'sample',
+  components: { Btn },
   data () {
     return {
+      files: []
     }
   },
   mounted () {
@@ -32,15 +38,20 @@ export default {
       edit = new ImgEdit({
         canvas: '#canvas',
         width: 800,
-        height: 600,
-        input: '#file_input',
+        height: 600
+        /* input: '#file_input',
         inputListener: (e) => {
           for (const f of e.target.files) {
             this.add(f)
           }
-        }
+        } */
       })
       edit.draw('https://t12.baidu.com/it/u=54104471,2172971201&fm=76')
+      document.getElementById('file_input').addEventListener('change', e => {
+        for (const f of e.target.files) {
+          this.add(f)
+        }
+      })
       const drawRange = document.getElementById('draw_range')
       drawRange.addEventListener('dragenter', e => {
         e.preventDefault()
@@ -61,6 +72,10 @@ export default {
         drawRange.classList.remove('active')
       })
     })
+    message.config({
+      noClose: true,
+      dragMode: 0
+    })
   },
   methods: {
     add (file) {
@@ -72,7 +87,7 @@ export default {
       const chunks = Math.ceil(file.size / chunkSize)
       let currentChunk = 0
       let md5 = ''
-      fileReader.onload = function (e) {
+      fileReader.onload = async (e) => {
         spark.append(e.target.result)
         currentChunk++
         if (currentChunk < chunks) {
@@ -81,7 +96,18 @@ export default {
         } else {
           // 数据块加载结束
           md5 = spark.end()
-          console.log(md5)
+          const dataURL = await readFile(file)
+          const img = await loadImg(dataURL)
+          this.files.push({
+            name: file.name,
+            size: file.size,
+            width: img.width,
+            height: img.height,
+            md5,
+            dataURL
+          })
+          edit.draw(img)
+          console.log(this.files[this.files.length - 1])
         }
       }
       function loadNext () {
@@ -90,19 +116,37 @@ export default {
         fileReader.readAsArrayBuffer(blobSlice.call(file, start, end))
       }
       loadNext()
+    },
+    preview () {
+      const img = new Image()
+      img.src = edit.toDataURL()
+      const box = message.pop().append(img)
+      window.setTimeout(() => {
+        box.center()
+      }, 0)
     }
   }
 }
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style lang="scss" scoped>
+<style lang="scss">
+@import 'jmessage/style.css';
 #canvas {
   border: 1px solid black;
 }
 #draw_range {
   &.active {
     border: 1px dotted #eee;
+  }
+}
+.jmessage .message-box.pop-box {
+  width:800px;
+  .message-box__head {
+    font-size: 0;
+  }
+  .message-box__foot {
+    display: none;
   }
 }
 </style>
