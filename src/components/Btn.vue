@@ -21,6 +21,7 @@ export default {
   padding: 0 0.75em;
   line-height: 1.5;
   border-radius: 3px;
+  user-select: none;
   &:hover {
     background: #f1f1f1;
   }

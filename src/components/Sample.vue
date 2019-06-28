@@ -13,37 +13,12 @@
 </template>
 
 <script>
-import ImgEdit from 'imgedit'
+import ImgEdit, { resize } from 'imgedit'
 import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from './Btn'
 let edit
-function getImgBlob (url) {
-  return new Promise((resolve) => {
-    const xhr = new XMLHttpRequest()
-    xhr.responseType = 'blob'
-    xhr.onload = () => {
-      const file = xhr.response
-      let name = ''
-      const m = url.match(/[\w.-]+\.(?:jpe?g|png)$/)
-      if (m) name = m[0]
-      else {
-        name = SparkMD5.hash(url)
-        switch (file.type.slice('/')[1]) {
-          case 'png': name = `${name}.png`
-            break
-          default: name = `${name}.jpg`
-            break
-        }
-      }
-      file.name = name
-      resolve(file)
-    }
-    xhr.open('GET', url)
-    // xhr.overrideMimeType('text/plain; charset=x-user-defined')
-    xhr.send(null)
-  })
-}
+
 export default {
   name: 'sample',
   components: { Btn },
@@ -104,9 +79,19 @@ export default {
         } */
         this.add(e.target.files[0])
       })
-      this.add('https://t12.baidu.com/it/u=54104471,2172971201&fm=76')
-      edit.onChange((state, type) => {
-        console.log(type, state)
+      edit.onChange((state) => {
+        console.log(state)
+      })
+      // this.add('https://t12.baidu.com/it/u=54104471,2172971201&fm=76')
+      resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
+        const img = new Image()
+        img.onload = () => {
+          const box = message.pop().append(img)
+          window.setTimeout(() => {
+            box.center()
+          }, 0)
+        }
+        img.src = b64
       })
     })
     message.config({
@@ -116,9 +101,6 @@ export default {
   },
   methods: {
     async add (file) {
-      if (typeof file === 'string' && /^(?:https?:)?\/\//.test(file)) {
-        file = await getImgBlob(file)
-      }
       if (!/\.(?:png|jpg|jpeg|gif|bmp)$/i.test(file.name)) return false
       const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
       const fileReader = new FileReader()
@@ -198,6 +180,9 @@ export default {
   width:800px;
   .message-box__head {
     font-size: 0;
+  }
+  .message-box__body {
+    text-align: center;
   }
   .message-box__foot {
     display: none;
