@@ -7,7 +7,7 @@
         <input type="file" name="" multiple accept="image/*" id="file_input">
       </form>
       <div class="info">width: {{file.width}} height: {{file.width}}</div>
-      <div class="tools"><Btn text="预览" @click.native="preview"/></div>
+      <div class="tools"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="裁剪" @click.native="cut()"/><Btn text="缩放" @click.native="resize()"/><Btn text="清理" @click.native="clean()"/><Btn text="预览" @click.native="preview"/></div>
     </div>
   </div>
 </template>
@@ -105,6 +105,9 @@ export default {
         this.add(e.target.files[0])
       })
       this.add('https://t12.baidu.com/it/u=54104471,2172971201&fm=76')
+      edit.onChange((state, type) => {
+        console.log(type, state)
+      })
     })
     message.config({
       noClose: true,
@@ -155,6 +158,18 @@ export default {
         fileReader.readAsArrayBuffer(blobSlice.call(file, start, end))
       }
       loadNext()
+    },
+    rotate (deg) {
+      edit.rotate(deg)
+    },
+    cut () {
+      edit.cut()
+    },
+    resize () {
+      edit.resize()
+    },
+    clean () {
+      edit.clean()
     },
     preview () {
       const img = new Image()
