@@ -6,14 +6,16 @@
       <form action="">
         <input type="file" name="" multiple accept="image/*" id="file_input">
       </form>
-      <div class="info">width: {{file.width}} height: {{file.width}}</div>
-      <div class="tools"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="裁剪" @click.native="cut()"/><Btn text="缩放" @click.native="resize()"/><Btn text="清理" @click.native="clean()"/><Btn text="预览" @click.native="preview"/></div>
+      <div class="info">{{state.width}}x{{state.height}} @{{state.viewScale}}</div>
+      <div class="info"><input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"> <Btn text="缩小" @click.native="resize()"/></div>
+      <div class="info"><input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"> <Btn text="裁剪" @click.native="cut()"/></div>
+      <div class="tools"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="清理" @click.native="clean()"/><Btn text="重置" @click.native="reset()"/><Btn text="预览" @click.native="preview"/></div>
     </div>
   </div>
 </template>
 
 <script>
-import ImgEdit, { resize } from 'imgedit'
+import ImgEdit/* , { resize } */ from 'imgedit'
 import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from './Btn'
@@ -30,6 +32,20 @@ export default {
         width: 0,
         height: 0,
         md5: ''
+      },
+      width: 0,
+      height: 0,
+      state: {
+        width: 0,
+        height: 0,
+        viewScale: 0,
+        range: {
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0
+        },
+        type: 0
       }
     }
   },
@@ -80,10 +96,10 @@ export default {
         this.add(e.target.files[0])
       })
       edit.onChange((state) => {
-        console.log(state)
+        Object.assign(this.state, state)
       })
       // this.add('https://t12.baidu.com/it/u=54104471,2172971201&fm=76')
-      resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
+      /* resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
         const img = new Image()
         img.onload = () => {
           const box = message.pop().append(img)
@@ -92,7 +108,7 @@ export default {
           }, 0)
         }
         img.src = b64
-      })
+      }) */
     })
     message.config({
       noClose: true,
@@ -148,10 +164,23 @@ export default {
       edit.cut()
     },
     resize () {
-      edit.resize()
+      edit.resize(this.width, this.height)
     },
     clean () {
       edit.clean()
+    },
+    reset () {
+      edit.reset()
+    },
+    change (e, type) {
+      if (type === 'range') {
+        // 设置选择范围
+        const val = e.target.value
+
+        if (/^(?:\d+,){1,3}\d+$/.test(val)) {
+          edit.setRange(...val.split(','))
+        }
+      }
     },
     preview () {
       const img = new Image()
@@ -160,6 +189,11 @@ export default {
       window.setTimeout(() => {
         box.center()
       }, 0)
+    }
+  },
+  computed: {
+    range () {
+      return `${this.state.range.width},${this.state.range.height},${this.state.range.x},${this.state.range.y}`
     }
   }
 }
