@@ -4,18 +4,19 @@
     <div id="draw_range">
       <canvas id="canvas"></canvas>
       <form action="">
-        <input type="file" name="" multiple accept="image/*" id="file_input">
+        <fieldset><input type="file" name="" multiple accept="image/*" id="file_input"></fieldset>
+        <fieldset><input type="text" v-model="url"> <Btn text="加载" @click.native="fetch"/></fieldset>
       </form>
       <div class="info">{{state.width}}x{{state.height}} @{{state.viewScale}}</div>
-      <div class="info"><input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"> <Btn text="缩小" @click.native="resize()"/></div>
-      <div class="info"><input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"> <Btn text="裁剪" @click.native="cut()"/></div>
-      <div class="tools"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="清理" @click.native="clean()"/><Btn text="重置" @click.native="reset()"/><Btn text="预览" @click.native="preview"/></div>
+      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"> <Btn text="缩放" @click.native="resize"/></div>
+      <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"> <Btn text="裁剪" @click.native="cut"/></div>
+      <div class="tools"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/></div>
     </div>
   </div>
 </template>
 
 <script>
-import ImgEdit/* , { resize } */ from 'imgedit'
+import ImgEdit, { fetchImg } from 'imgedit'
 import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from './Btn'
@@ -26,6 +27,7 @@ export default {
   components: { Btn },
   data () {
     return {
+      url: '',
       file: {
         name: '',
         size: 0,
@@ -96,6 +98,7 @@ export default {
         this.add(e.target.files[0])
       })
       edit.onChange((state) => {
+        console.log(state)
         Object.assign(this.state, state)
       })
       // this.add('https://t12.baidu.com/it/u=54104471,2172971201&fm=76')
@@ -116,6 +119,15 @@ export default {
     })
   },
   methods: {
+    fetch () {
+      if (/^https?:\/\//.test(this.url)) {
+        fetchImg(this.url).then((img) => {
+          this.add(img)
+        }).catch((e) => {
+          message.alert('加载图片失败')
+        })
+      }
+    },
     async add (file) {
       if (!/\.(?:png|jpg|jpeg|gif|bmp)$/i.test(file.name)) return false
       const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
@@ -164,6 +176,7 @@ export default {
       edit.cut()
     },
     resize () {
+      console.log(this.width, this.height)
       edit.resize(this.width, this.height)
     },
     clean () {
@@ -202,6 +215,10 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style lang="scss">
 @import 'jmessage/style.css';
+.img-edit {
+  max-width: 900px;
+  margin:0 auto;
+}
 #canvas {
   border: 1px solid black;
 }
