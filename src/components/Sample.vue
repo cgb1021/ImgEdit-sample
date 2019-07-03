@@ -8,9 +8,9 @@
         <fieldset><input type="text" v-model="url"> <Btn text="加载" @click.native="fetch"/></fieldset>
       </form>
       <div class="info">{{state.width}}x{{state.height}} @{{state.viewScale}}</div>
-      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"> <Btn text="缩放" @click.native="resize"/></div>
+      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"> <Btn text="调整" @click.native="resize"/></div>
       <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"> <Btn text="裁剪" @click.native="cut"/></div>
-      <div class="tools"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/></div>
+      <div class="tools"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(.1)"/><Btn text="缩小" @click.native="scale(-.1)"/><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/></div>
     </div>
   </div>
 </template>
@@ -178,6 +178,9 @@ export default {
     resize () {
       console.log(this.width, this.height)
       edit.resize(this.width, this.height)
+    },
+    scale (s) {
+      edit.scale(s)
     },
     clean () {
       edit.clean()
