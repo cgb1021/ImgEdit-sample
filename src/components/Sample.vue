@@ -4,13 +4,14 @@
     <div id="draw_range">
       <canvas id="canvas"></canvas>
       <form action="">
-        <fieldset><input type="file" name="" multiple accept="image/*" id="file_input"></fieldset>
-        <fieldset><input type="text" v-model="url"> <Btn text="加载" @click.native="fetch"/></fieldset>
+        <label>选择本地图片 <input type="file" name="" multiple accept="image/*" id="file_input"><Btn text="选择"/></label>
+        <label>输入在线图片 <input type="text" v-model="url"><Btn text="加载" @click.native="fetch"/></label>
       </form>
-      <div class="info">{{state.width}}x{{state.height}} @{{state.viewScale}}</div>
-      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"> <Btn text="调整" @click.native="resize"/></div>
-      <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"> <Btn text="裁剪" @click.native="cut"/></div>
-      <div class="tools"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(.1)"/><Btn text="缩小" @click.native="scale(-.1)"/><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/></div>
+      <div class="info">{{state.width}}px X {{state.height}}px @{{state.viewScale}}</div>
+      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn text="调整" @click.native="resize"/></div>
+      <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn text="裁剪" @click.native="cut"/></div>
+      <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(.1)"/><Btn text="缩小" @click.native="scale(-.1)"/><Btn text="居中" @click.native="align('center')"/></div>
+      <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/></div>
     </div>
   </div>
 </template>
@@ -98,7 +99,7 @@ export default {
         this.add(e.target.files[0])
       })
       edit.onChange((state) => {
-        console.log(state)
+        console.log('edit.onChange', state)
         Object.assign(this.state, state)
       })
       // this.add('https://t12.baidu.com/it/u=54104471,2172971201&fm=76')
@@ -147,7 +148,7 @@ export default {
           // 数据块加载结束
           md5 = spark.end()
           await edit.open(file)
-          edit.draw()
+          // edit.draw()
           /* this.files.push({
             name: file.name,
             size: file.size,
@@ -181,6 +182,9 @@ export default {
     },
     scale (s) {
       edit.scale(s)
+    },
+    align (p) {
+      edit.align(p)
     },
     clean () {
       edit.clean()
@@ -221,6 +225,22 @@ export default {
 .img-edit {
   max-width: 900px;
   margin:0 auto;
+  input {
+    border-top:none;
+    border-left:none;
+    border-right:none;
+    outline: none;
+    &[type=file] {
+      width:0;
+    }
+  }
+  .info {
+    border-bottom:1px dotted #ccc;
+    padding:1em 0;
+  }
+  .btn {
+    margin:0 .75em;
+  }
 }
 #canvas {
   border: 1px solid black;
