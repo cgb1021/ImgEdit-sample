@@ -17,7 +17,7 @@
 </template>
 
 <script>
-import ImgEdit, { fetchImg } from 'imgedit'
+import ImgEdit, { fetchImg/* , resize, cut, rotate */ } from 'imgedit'
 import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from './Btn'
