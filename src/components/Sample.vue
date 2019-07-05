@@ -113,6 +113,26 @@ export default {
         }
         img.src = b64
       }) */
+      /* cut('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100, 100, 50, 50).then((b64) => {
+        const img = new Image()
+        img.onload = () => {
+          const box = message.pop().append(img)
+          window.setTimeout(() => {
+            box.center()
+          }, 0)
+        }
+        img.src = b64
+      }) */
+      /* rotate('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 90).then((b64) => {
+        const img = new Image()
+        img.onload = () => {
+          const box = message.pop().append(img)
+          window.setTimeout(() => {
+            box.center()
+          }, 0)
+        }
+        img.src = b64
+      }) */
     })
     message.config({
       noClose: true,
@@ -177,7 +197,6 @@ export default {
       edit.cut()
     },
     resize () {
-      console.log(this.width, this.height)
       edit.resize(this.width, this.height)
     },
     scale (s) {
