@@ -10,8 +10,8 @@
       <div class="info">{{state.width}}px X {{state.height}}px @{{state.viewScale}}</div>
       <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn text="调整" @click.native="resize"/></div>
       <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn text="裁剪" @click.native="cut"/></div>
-      <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(.1)"/><Btn text="缩小" @click.native="scale(-.1)"/><Btn text="居中" @click.native="align('center')"/></div>
-      <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/></div>
+      <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.viewScale + .1)"/><Btn text="缩小" @click.native="scale(state.viewScale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
+      <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="上传" @click.native="upload"/></div>
     </div>
   </div>
 </template>
@@ -53,13 +53,6 @@ export default {
     }
   },
   mounted () {
-    /* edit = new ImgEdit({
-      canvas: document.getElementById('canvas'),
-      width: 800,
-      height: 600
-    }) */
-    // edit = new ImgEdit(document.getElementById('canvas'))
-    // edit = new ImgEdit('#canvas')
     this.$nextTick(() => {
       edit = new ImgEdit({
         canvas: '#canvas',
@@ -115,7 +108,6 @@ export default {
         console.log('edit.onChange', state)
         Object.assign(this.state, state)
       })
-      // this.add('https://t12.baidu.com/it/u=54104471,2172971201&fm=76')
       /* resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
         const img = new Image()
         img.onload = () => {
@@ -147,10 +139,10 @@ export default {
         img.src = b64
       }) */
     })
-    message.config({
+    /* message.config({
       noClose: true,
       dragMode: 0
-    })
+    }) */
   },
   methods: {
     fetch () {
@@ -235,12 +227,28 @@ export default {
       }
     },
     preview () {
+      if (!edit.img) return
       const img = new Image()
+      img.onload = () => {
+        const box = message.pop().append(img)
+        window.setTimeout(() => {
+          box.center()
+        }, 0)
+      }
       img.src = edit.toDataURL()
-      const box = message.pop().append(img)
-      window.setTimeout(() => {
-        box.center()
-      }, 0)
+    },
+    upload () {
+      if (!edit.img) return
+      edit.toBlob('image/png').then((file) => {
+        const fd = new FormData()
+        fd.append('image', file)
+        const xhr = new XMLHttpRequest()
+        xhr.onload = (res) => {
+          console.log(res)
+        }
+        xhr.open('POST', '//127.0.0.1/server/upload.php')
+        xhr.send(fd)
+      })
     }
   },
   computed: {
