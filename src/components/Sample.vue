@@ -243,8 +243,8 @@ export default {
         const fd = new FormData()
         fd.append('image', file)
         const xhr = new XMLHttpRequest()
-        xhr.onload = (res) => {
-          console.log(res)
+        xhr.onload = (e) => {
+          console.log(e.target.responseText)
         }
         xhr.open('POST', '//127.0.0.1/server/upload.php')
         xhr.send(fd)
