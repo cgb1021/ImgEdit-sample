@@ -64,12 +64,25 @@ export default {
       edit = new ImgEdit({
         canvas: '#canvas',
         width: 800,
-        height: 600
-        /* input: '#file_input',
-        inputListener: (e) => {
-          for (const f of e.target.files) {
-            this.add(f)
+        height: 600,
+        before: (context) => {
+          const canvas = context.canvas
+          const bgSize = 10
+          const xs = Math.ceil(canvas.width / bgSize) // 画canvas背景x轴循环次数
+          const ys = Math.ceil(canvas.height / bgSize) // 画canvas背景y轴循环次数
+          const color1 = '#ccc'
+          const color2 = '#eee' // 画布和图片的比例
+          for (let y = 0; y < ys; ++y) {
+            let color = y % 2 ? color1 : color2
+            for (let x = 0; x < xs; ++x) {
+              context.fillStyle = color
+              context.fillRect(x * bgSize, y * bgSize, bgSize, bgSize)
+              color = color === color1 ? color2 : color1
+            }
           }
+        }/* ,
+        after: () => {
+          console.log('after')
         } */
       })
       const drawRange = document.getElementById('draw_range')
