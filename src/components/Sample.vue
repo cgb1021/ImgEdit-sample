@@ -22,6 +22,8 @@ import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from './Btn'
 let edit
+let mime
+let name
 
 export default {
   name: 'sample',
@@ -156,6 +158,8 @@ export default {
     },
     async add (file) {
       if (!/\.(?:png|jpg|jpeg|gif|bmp)$/i.test(file.name)) return false
+      mime = file.type
+      name = file.name
       const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
       const fileReader = new FileReader()
       const spark = new SparkMD5.ArrayBuffer()
@@ -239,12 +243,13 @@ export default {
     },
     upload () {
       if (!edit.img) return
-      edit.toBlob('image/png').then((file) => {
+      edit.toBlob(mime || 'image/png').then((blob) => {
+        const file = new File([blob], name, {type: mime, lastModified: Date.now()})
         const fd = new FormData()
         fd.append('image', file)
         const xhr = new XMLHttpRequest()
         xhr.onload = (e) => {
-          console.log(e.target.responseText)
+          if (e.target.responseText !== '1') message.alert(e.target.responseText)
         }
         xhr.open('POST', '//127.0.0.1/server/upload.php')
         xhr.send(fd)
