@@ -11,11 +11,11 @@
       <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn text="调整" @click.native="resize"/></div>
       <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn text="裁剪" @click.native="cut"/></div>
       <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.scale + .1)"/><Btn text="缩小" @click.native="scale(state.scale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
-      <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="上传" @click.native="upload"/></div>
+      <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="保存" @click.native="save"/></div>
     </div>
     <div class="filelist">
       <ul>
-        <li v-for="(file, index) in fileList" :key="index">{{file.name}} {{file.result}} <Btn text="打开" @click.native="open(index)"/></li>
+        <li v-for="(file, index) in fileList" :key="index">{{file.name}} | {{getSize(file.size)}} | {{file.md5}} | {{file.result}} <Btn text="打开" @click.native="open(index)"/> <Btn text="上传" @click.native="upload(index)"/></li>
       </ul>
     </div>
   </div>
@@ -27,11 +27,7 @@ import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from './Btn'
 let edit
-let mime
-let name
 let fileListIndex = 0
-const maxSize = 500 * 1024 // 500kb
-
 export default {
   name: 'sample',
   components: { Btn },
@@ -158,17 +154,18 @@ export default {
         })
       }
     },
-    async add (file) {
-      if (!/\.(?:png|jpg|jpeg|gif|bmp)$/i.test(file.name)) {
-        console.log('非图片')
-        return false
+    async add (file, index = -1) {
+      if (index === -1) {
+        if (!/\.(?:png|jpg|jpeg|gif|bmp)$/i.test(file.name)) {
+          console.log('非图片')
+          return false
+        }
+        const maxSize = 500 * 1024 // 500kb
+        if (file.size > maxSize) {
+          console.log(`超大小: ${((file.size - maxSize) / 1024).toFixed(2)}KB`)
+          return false
+        }
       }
-      if (file.size > maxSize) {
-        console.log(`超大小: ${((file.size - maxSize) / 1024).toFixed(2)}KB`)
-        return false
-      }
-      mime = file.type
-      name = file.name
       const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
       const fileReader = new FileReader()
       const spark = new SparkMD5.ArrayBuffer()
@@ -194,13 +191,20 @@ export default {
             height: edit.height(),
             md5
           }) */
-          this.fileList.push({
-            name: file.name,
-            size: file.size,
-            result: 'ready',
-            md5,
-            file
-          })
+          if (index < 0) {
+            this.fileList.push({
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              result: 'ready',
+              md5,
+              file
+            })
+          } else {
+            this.fileList[index].size = file.size
+            this.fileList[index].md5 = md5
+            this.fileList[index].file = file
+          }
         }
       }
       function loadNext () {
@@ -211,8 +215,16 @@ export default {
       loadNext()
     },
     open (index) {
+      const file = this.fileList[index].file
       fileListIndex = index
-      edit.open(this.fileList[index].file)
+      edit.open(file)
+    },
+    save () {
+      if (!edit.img) return
+      const file = this.fileList[fileListIndex]
+      edit.toBlob(file.type || 'image/png').then((blob) => {
+        this.add(new File([blob], file.name, {type: file.type, lastModified: Date.now()}), fileListIndex)
+      })
     },
     rotate (deg) {
       edit.rotate(deg)
@@ -256,25 +268,30 @@ export default {
       }
       img.src = edit.toDataURL()
     },
-    upload () {
-      if (!edit.img) return
-      edit.toBlob(mime || 'image/png').then((blob) => {
-        const file = new File([blob], name, {type: mime, lastModified: Date.now()})
-        const fd = new FormData()
-        fd.append('image', file)
-        const xhr = new XMLHttpRequest()
-        xhr.onload = (e) => {
-          if (e.target.responseText === '1') {
-            this.fileList[fileListIndex].result = 'success'
-          } else if (e.target.responseText === '0') {
-            this.fileList[fileListIndex].result = 'fail'
-          } else {
-            this.fileList[fileListIndex].result = e.target.responseText
-          }
+    upload (index) {
+      const fd = new FormData()
+      fd.append('image', this.fileList[index].file)
+      const xhr = new XMLHttpRequest()
+      xhr.onload = (e) => {
+        if (e.target.responseText === '1') {
+          this.fileList[fileListIndex].result = 'success'
+        } else if (e.target.responseText === '0') {
+          this.fileList[fileListIndex].result = 'fail'
+        } else {
+          this.fileList[fileListIndex].result = e.target.responseText
         }
-        xhr.open('POST', '//127.0.0.1/server/upload.php')
-        xhr.send(fd)
-      })
+      }
+      xhr.open('POST', '//127.0.0.1/server/upload.php')
+      xhr.send(fd)
+    },
+    getSize (size, len = 2) {
+      const text = ['B', 'KB', 'MB', 'GB']
+      let count = 0
+      while (size > 1024 && count < text.length - 1) {
+        size /= 1024
+        ++count
+      }
+      return `${size.toFixed(len)}${text[count]}`
     }
   },
   computed: {
