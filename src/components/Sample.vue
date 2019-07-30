@@ -285,7 +285,7 @@ export default {
       xhr.send(fd)
     },
     getSize (size, len = 2) {
-      const text = ['B', 'KB', 'MB', 'GB']
+      const text = ['B', 'KB', 'MB', 'GB', 'TB']
       let count = 0
       while (size > 1024 && count < text.length - 1) {
         size /= 1024
