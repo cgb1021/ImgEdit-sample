@@ -7,11 +7,16 @@
         <label>选择本地图片 <input type="file" name="" multiple accept="image/*" id="file_input"><Btn text="选择"/></label>
         <label>输入在线图片 <input type="text" v-model="url"><Btn text="加载" @click.native="fetch"/></label>
       </form>
-      <div class="info">{{state.width}}px X {{state.height}}px @{{state.viewScale}}</div>
+      <div class="info">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
       <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn text="调整" @click.native="resize"/></div>
       <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn text="裁剪" @click.native="cut"/></div>
-      <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.viewScale + .1)"/><Btn text="缩小" @click.native="scale(state.viewScale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
+      <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.scale + .1)"/><Btn text="缩小" @click.native="scale(state.scale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
       <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="上传" @click.native="upload"/></div>
+    </div>
+    <div class="filelist">
+      <ul>
+        <li v-for="(file, index) in fileList" :key="index">{{file.name}} {{file.result}} <Btn text="打开" @click.native="open(index)"/></li>
+      </ul>
     </div>
   </div>
 </template>
@@ -24,6 +29,8 @@ import Btn from './Btn'
 let edit
 let mime
 let name
+let fileListIndex = 0
+const maxSize = 500 * 1024 // 500kb
 
 export default {
   name: 'sample',
@@ -31,6 +38,7 @@ export default {
   data () {
     return {
       url: '',
+      fileList: [],
       file: {
         name: '',
         size: 0,
@@ -43,7 +51,7 @@ export default {
       state: {
         width: 0,
         height: 0,
-        viewScale: 0,
+        scale: 0,
         range: {
           x: 0,
           y: 0,
@@ -55,95 +63,89 @@ export default {
     }
   },
   mounted () {
-    this.$nextTick(() => {
-      edit = new ImgEdit({
-        canvas: '#canvas',
-        width: 800,
-        height: 600,
-        before: (context) => {
-          const canvas = context.canvas
-          const bgSize = 10
-          const xs = Math.ceil(canvas.width / bgSize) // 画canvas背景x轴循环次数
-          const ys = Math.ceil(canvas.height / bgSize) // 画canvas背景y轴循环次数
-          const color1 = '#ccc'
-          const color2 = '#eee' // 画布和图片的比例
-          for (let y = 0; y < ys; ++y) {
-            let color = y % 2 ? color1 : color2
-            for (let x = 0; x < xs; ++x) {
-              context.fillStyle = color
-              context.fillRect(x * bgSize, y * bgSize, bgSize, bgSize)
-              color = color === color1 ? color2 : color1
-            }
+    edit = new ImgEdit({
+      canvas: '#canvas',
+      width: 800,
+      height: 600,
+      before: (context) => {
+        const canvas = context.canvas
+        const bgSize = 10
+        const xs = Math.ceil(canvas.width / bgSize) // 画canvas背景x轴循环次数
+        const ys = Math.ceil(canvas.height / bgSize) // 画canvas背景y轴循环次数
+        const color1 = '#ccc'
+        const color2 = '#eee' // 画布和图片的比例
+        for (let y = 0; y < ys; ++y) {
+          let color = y % 2 ? color1 : color2
+          for (let x = 0; x < xs; ++x) {
+            context.fillStyle = color
+            context.fillRect(x * bgSize, y * bgSize, bgSize, bgSize)
+            color = color === color1 ? color2 : color1
           }
-        }/* ,
-        after: () => {
-          console.log('after')
-        } */
-      })
-      const drawRange = document.getElementById('draw_range')
-      drawRange.addEventListener('dragenter', e => {
-        e.preventDefault()
-        drawRange.classList.add('active')
-      })
-      drawRange.addEventListener('dragleave', e => {
-        e.preventDefault()
-        drawRange.classList.remove('active')
-      })
-      drawRange.addEventListener('dragover', e => {
-        e.preventDefault()
-      })
-      drawRange.addEventListener('drop', e => {
-        e.preventDefault()
-        /* for (const f of e.dataTransfer.files) {
-          this.add(f)
-        } */
-        this.add(e.dataTransfer.files[0])
-        drawRange.classList.remove('active')
-      })
-      document.getElementById('file_input').addEventListener('change', e => {
-        /* for (const f of e.target.files) {
-          this.add(f)
-        } */
-        this.add(e.target.files[0])
-      })
-      edit.onChange((state) => {
-        console.log('edit.onChange', state)
-        Object.assign(this.state, state)
-      })
-      /* resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
-        const img = new Image()
-        img.onload = () => {
-          const box = message.pop().append(img)
-          window.setTimeout(() => {
-            box.center()
-          }, 0)
         }
-        img.src = b64
-      }) */
-      /* cut('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100, 100, 50, 50).then((b64) => {
-        const img = new Image()
-        img.onload = () => {
-          const box = message.pop().append(img)
-          window.setTimeout(() => {
-            box.center()
-          }, 0)
-        }
-        img.src = b64
-      }) */
-      /* rotate('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 90).then((b64) => {
-        const img = new Image()
-        img.onload = () => {
-          const box = message.pop().append(img)
-          window.setTimeout(() => {
-            box.center()
-          }, 0)
-        }
-        img.src = b64
-      }) */
+      }/* ,
+      after: () => {
+        console.log('after')
+      } */
     })
-    /* message.config({
-      noClose: true,
-      dragMode: 0
+    const drawRange = document.getElementById('draw_range')
+    drawRange.addEventListener('dragenter', e => {
+      e.preventDefault()
+      drawRange.classList.add('active')
+    })
+    drawRange.addEventListener('dragleave', e => {
+      e.preventDefault()
+      drawRange.classList.remove('active')
+    })
+    drawRange.addEventListener('dragover', e => {
+      e.preventDefault()
+    })
+    drawRange.addEventListener('drop', e => {
+      e.preventDefault()
+      for (const f of e.dataTransfer.files) {
+        this.add(f)
+      }
+      // this.add(e.dataTransfer.files[0])
+      drawRange.classList.remove('active')
+    })
+    document.getElementById('file_input').addEventListener('change', e => {
+      for (const f of e.target.files) {
+        this.add(f)
+      }
+      // this.add(e.target.files[0])
+    })
+    edit.onChange((state) => {
+      console.log('edit.onChange', state)
+      Object.assign(this.state, state)
+    })
+    /* resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
+      const img = new Image()
+      img.onload = () => {
+        const box = message.pop().append(img)
+        window.setTimeout(() => {
+          box.center()
+        }, 0)
+      }
+      img.src = b64
+    }) */
+    /* cut('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100, 100, 50, 50).then((b64) => {
+      const img = new Image()
+      img.onload = () => {
+        const box = message.pop().append(img)
+        window.setTimeout(() => {
+          box.center()
+        }, 0)
+      }
+      img.src = b64
+    }) */
+    /* rotate('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 90).then((b64) => {
+      const img = new Image()
+      img.onload = () => {
+        const box = message.pop().append(img)
+        window.setTimeout(() => {
+          box.center()
+        }, 0)
+      }
+      img.src = b64
     }) */
   },
   methods: {
@@ -152,12 +154,19 @@ export default {
         fetchImg(this.url).then((img) => {
           this.add(img)
         }).catch((e) => {
-          message.alert('加载图片失败')
+          console.log('加载图片失败')
         })
       }
     },
     async add (file) {
-      if (!/\.(?:png|jpg|jpeg|gif|bmp)$/i.test(file.name)) return false
+      if (!/\.(?:png|jpg|jpeg|gif|bmp)$/i.test(file.name)) {
+        console.log('非图片')
+        return false
+      }
+      if (file.size > maxSize) {
+        console.log(`超大小: ${((file.size - maxSize) / 1024).toFixed(2)}KB`)
+        return false
+      }
       mime = file.type
       name = file.name
       const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
@@ -167,7 +176,7 @@ export default {
       const chunks = Math.ceil(file.size / chunkSize)
       let currentChunk = 0
       let md5 = ''
-      fileReader.onload = async (e) => {
+      fileReader.onload = (e) => {
         spark.append(e.target.result)
         currentChunk++
         if (currentChunk < chunks) {
@@ -176,7 +185,7 @@ export default {
         } else {
           // 数据块加载结束
           md5 = spark.end()
-          await edit.open(file)
+          // await edit.open(file)
           // edit.draw()
           /* this.files.push({
             name: file.name,
@@ -185,11 +194,13 @@ export default {
             height: edit.height(),
             md5
           }) */
-          this.file.name = file.name
-          this.file.size = file.size
-          this.file.width = edit.width()
-          this.file.height = edit.height()
-          this.file.md5 = md5
+          this.fileList.push({
+            name: file.name,
+            size: file.size,
+            result: 'ready',
+            md5,
+            file
+          })
         }
       }
       function loadNext () {
@@ -198,6 +209,10 @@ export default {
         fileReader.readAsArrayBuffer(blobSlice.call(file, start, end))
       }
       loadNext()
+    },
+    open (index) {
+      fileListIndex = index
+      edit.open(this.fileList[index].file)
     },
     rotate (deg) {
       edit.rotate(deg)
@@ -249,7 +264,13 @@ export default {
         fd.append('image', file)
         const xhr = new XMLHttpRequest()
         xhr.onload = (e) => {
-          if (e.target.responseText !== '1') message.alert(e.target.responseText)
+          if (e.target.responseText === '1') {
+            this.fileList[fileListIndex].result = 'success'
+          } else if (e.target.responseText === '0') {
+            this.fileList[fileListIndex].result = 'fail'
+          } else {
+            this.fileList[fileListIndex].result = e.target.responseText
+          }
         }
         xhr.open('POST', '//127.0.0.1/server/upload.php')
         xhr.send(fd)
