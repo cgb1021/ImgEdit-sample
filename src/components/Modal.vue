@@ -1,6 +1,6 @@
 <template>
-  <div class="modal" tabindex="-1" role="dialog" :style="{'display': isShow ? 'block' : 'none'}">
-    <div class="modal-dialog" role="document">
+  <div class="modal fade" tabindex="-1" role="dialog" :style="{'display': isShow ? 'block' : 'none', 'opacity': opacity}">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
       <div class="modal-content">
         <!--div class="modal-header">
           <h5 class="modal-title">Modal title</h5>
@@ -23,7 +23,23 @@
 <script>
 export default {
   name: 'modal',
-  props: ['isShow']
+  props: ['isShow'],
+  data () {
+    return {
+      opacity: 0
+    }
+  },
+  watch: {
+    isShow (val) {
+      if (val) {
+        window.setTimeout(() => {
+          this.opacity = 1
+        }, 0)
+      } else {
+        this.opacity = 0
+      }
+    }
+  }
 }
 </script>
 

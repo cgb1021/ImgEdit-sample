@@ -17,7 +17,7 @@
     </form>
     <div class="filelist">
       <ul>
-        <li v-for="(file, index) in fileList" :key="index">{{file.name}} | {{getSize(file.size)}} | {{file.md5}} | {{file.result}} <Btn text="编辑" @click.native="open(index)"/> <Btn text="上传" @click.native="upload(index)"/> <Btn text="移除" @click.native="remove(index)"/></li>
+        <li v-for="(file, index) in fileList" :key="index" :class="{'current': fileListIndex === index}">{{file.name}} | {{getSize(file.size)}} | {{file.md5}} | {{file.result}} <Btn text="编辑" @click.native="open(index)"/> <Btn text="上传" @click.native="upload(index)"/> <Btn text="移除" @click.native="remove(index)"/></li>
       </ul>
     </div>
   </div>
@@ -30,7 +30,6 @@ import SparkMD5 from 'spark-md5'
 import Btn from '../components/Btn'
 import Modal from '../components/Modal'
 let edit
-let fileListIndex = 0
 export default {
   name: 'sample',
   components: { Btn, Modal },
@@ -38,6 +37,7 @@ export default {
     return {
       url: '',
       fileList: [],
+      fileListIndex: -1,
       isShow: false,
       file: {
         name: '',
@@ -224,22 +224,23 @@ export default {
     },
     open (index) {
       const file = this.fileList[index].file
-      fileListIndex = index
+      this.fileListIndex = index
       edit.open(file)
       this.isShow = true
     },
     close () {
       edit.close()
       this.isShow = false
+      this.fileListIndex = -1
     },
     remove (index) {
       this.fileList.splice(index, 1)
     },
     save () {
       if (!edit.img) return
-      const file = this.fileList[fileListIndex]
+      const file = this.fileList[this.fileListIndex]
       edit.toBlob(file.type || 'image/png').then((blob) => {
-        this.add(new File([blob], file.name, {type: file.type, lastModified: Date.now()}), fileListIndex)
+        this.add(new File([blob], file.name, {type: file.type, lastModified: Date.now()}), this.fileListIndex)
       })
     },
     rotate (deg) {
@@ -290,11 +291,11 @@ export default {
       const xhr = new XMLHttpRequest()
       xhr.onload = (e) => {
         if (e.target.responseText === '1') {
-          this.fileList[fileListIndex].result = 'success'
+          this.fileList[this.fileListIndex].result = 'success'
         } else if (e.target.responseText === '0') {
-          this.fileList[fileListIndex].result = 'fail'
+          this.fileList[this.fileListIndex].result = 'fail'
         } else {
-          this.fileList[fileListIndex].result = e.target.responseText
+          this.fileList[this.fileListIndex].result = e.target.responseText
         }
       }
       xhr.open('POST', '//127.0.0.1/server/upload.php')
@@ -307,7 +308,7 @@ export default {
         size /= 1024
         ++count
       }
-      return `${size.toFixed(len)}${text[count]}`
+      return `${size.toFixed(len).replace(/\.?0+$/, '')}${text[count]}`
     }
   },
   computed: {
@@ -350,6 +351,9 @@ export default {
   &.active {
     border: 1px dotted #eee;
   }
+}
+.current {
+  color:red;
 }
 .jmessage .message-box.pop-box {
   width:800px;
