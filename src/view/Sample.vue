@@ -286,16 +286,17 @@ export default {
       img.src = edit.toDataURL()
     },
     upload (index) {
+      const res = this.fileList[index]
       const fd = new FormData()
-      fd.append('image', this.fileList[index].file)
+      fd.append('image', res.file)
       const xhr = new XMLHttpRequest()
       xhr.onload = (e) => {
         if (e.target.responseText === '1') {
-          this.fileList[this.fileListIndex].result = 'success'
+          res.result = 'success'
         } else if (e.target.responseText === '0') {
-          this.fileList[this.fileListIndex].result = 'fail'
+          res.result = 'fail'
         } else {
-          this.fileList[this.fileListIndex].result = e.target.responseText
+          res.result = e.target.responseText
         }
       }
       xhr.open('POST', '//127.0.0.1/server/upload.php')
