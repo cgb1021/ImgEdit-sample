@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import Sample from './components/Sample'
+import Sample from './view/Sample'
 
 export default {
   name: 'App',

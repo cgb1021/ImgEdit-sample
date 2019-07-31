@@ -1,14 +1,16 @@
 <template>
   <div class="img-edit">
     <h1>ImgEdit sample</h1>
-    <div id="draw_range" :style="{'height': editorHeight}">
-      <canvas id="canvas"></canvas>
-      <div class="info">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
-      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn text="调整" @click.native="resize"/></div>
-      <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn text="裁剪" @click.native="cut"/></div>
-      <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.scale + .1)"/><Btn text="缩小" @click.native="scale(state.scale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
-      <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="保存" @click.native="save"/><Btn text="关闭" @click.native="close"/></div>
-    </div>
+    <Modal :is-show="isShow" @close="close">
+      <div id="draw_range">
+        <canvas id="canvas"></canvas>
+        <div class="info">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
+        <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn text="调整" @click.native="resize"/></div>
+        <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn text="裁剪" @click.native="cut"/></div>
+        <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.scale + .1)"/><Btn text="缩小" @click.native="scale(state.scale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
+        <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="保存" @click.native="save"/></div>
+      </div>
+    </Modal>
     <form action="">
       <label>选择本地图片 <input type="file" name="" multiple accept="image/*" id="file_input"><Btn text="选择"/></label>
       <label>输入在线图片 <input type="text" v-model="url"><Btn text="加载" @click.native="fetch"/></label>
@@ -25,18 +27,18 @@
 import ImgEdit, { fetchImg/* , resize, cut, rotate */ } from 'imgedit'
 import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
-import Btn from './Btn'
+import Btn from '../components/Btn'
+import Modal from '../components/Modal'
 let edit
 let fileListIndex = 0
-let editorHeight = 0 // eslint-disable-line
 export default {
   name: 'sample',
-  components: { Btn },
+  components: { Btn, Modal },
   data () {
     return {
       url: '',
-      editorHeight: 'inherit',
       fileList: [],
+      isShow: false,
       file: {
         name: '',
         size: 0,
@@ -86,11 +88,6 @@ export default {
       } */
     })
     const drawRange = document.getElementById('draw_range')
-    editorHeight = drawRange.offsetHeight
-    this.editorHeight = 0
-    window.setTimeout(() => {
-      drawRange.classList.add('show')
-    }, 0)
     drawRange.addEventListener('transitionend', e => {
       console.log(e)
     })
@@ -213,6 +210,7 @@ export default {
           } else {
             this.fileList[index].size = file.size
             this.fileList[index].md5 = md5
+            this.fileList[index].result = 'ready'
             this.fileList[index].file = file
           }
         }
@@ -228,11 +226,11 @@ export default {
       const file = this.fileList[index].file
       fileListIndex = index
       edit.open(file)
-      this.editorHeight = `${editorHeight}px`
+      this.isShow = true
     },
     close () {
       edit.close()
-      this.editorHeight = 0
+      this.isShow = false
     },
     remove (index) {
       this.fileList.splice(index, 1)
@@ -347,12 +345,8 @@ export default {
   border: 1px solid black;
 }
 #draw_range {
-  visibility: hidden;
   overflow: hidden;
   transition: .25s height linear;
-  &.show {
-    visibility: visible;
-  }
   &.active {
     border: 1px dotted #eee;
   }
