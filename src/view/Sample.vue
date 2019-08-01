@@ -9,14 +9,42 @@
       <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.scale + .1)"/><Btn text="缩小" @click.native="scale(state.scale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
       <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="保存" @click.native="save"/></div>
     </Modal>
-    <form action="" id="input_range">
-      <label>选择本地图片 <input type="file" name="" multiple accept="image/*" id="file_input"><Btn text="选择"/></label>
-      <label>输入在线图片 <input type="text" v-model="url"><Btn text="加载" @click.native="fetch"/></label>
+    <form class="mt-5 mb-5 p-3 text-justify" action="" id="input_range">
+      <div class="form-group">
+        <label>选择本地图片 <input type="file" name="" multiple accept="image/*" id="file_input"><Btn text="选择"/></label>
+      </div>
+      <div class="form-row">
+        <div class="col-auto"><label for="url_input">输入在线图片</label></div>
+        <div class="col-8"><input type="text" class="form-control" id="url_input" aria-describedby="emailHelp" placeholder="https://" v-model="url"></div>
+        <div class="col-auto"><Btn text="加载" @click.native="fetch"/></div>
+      </div>
     </form>
-    <div class="filelist">
-      <ul>
-        <li v-for="(file, index) in fileList" :key="index" :class="{'current': fileListIndex === index}">{{file.name}} | {{getSize(file.size)}} | {{file.md5}} | {{file.result}} <Btn text="编辑" @click.native="open(index)"/> <Btn text="上传" @click.native="upload(index)"/> <Btn text="移除" @click.native="remove(index)"/></li>
-      </ul>
+    <div class="filelist mt-5 mb-5">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">名称</th>
+            <th scope="col">大小</th>
+            <th scope="col">md5</th>
+            <th scope="col">结果</th>
+            <th scope="col">操作</th>
+          </tr>
+        </thead>
+        <tbody v-if="fileList.length">
+          <tr v-for="(file, index) in fileList" :key="index" :class="{'current': fileListIndex === index}">
+            <th>{{file.name}}</th>
+            <td>{{getSize(file.size)}}</td>
+            <td>{{file.md5}}</td>
+            <td>{{file.result}}</td>
+            <td><Btn text="编辑" @click.native="open(index)"/> <Btn text="上传" @click.native="upload(index)"/> <Btn text="移除" @click.native="remove(index)"/></td>
+          </tr>
+        </tbody>
+        <tbody v-else>
+          <tr>
+            <td colspan="5" class="text-center">空空如也~~</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
@@ -67,8 +95,8 @@ function throttle (func, wait, options) {
     return result;
   };
 }
-function getWidth () {
-  const node = document.querySelector('#draw_range .modal-body')
+function getWidth (el) {
+  const node = document.querySelector(el)
   const style = window.getComputedStyle(node)
   return node.clientWidth - window.parseInt(style['paddingLeft'], 10) - window.parseInt(style['paddingRight'], 10)
 }
@@ -163,7 +191,7 @@ export default {
     })
     window.addEventListener('resize', throttle(() => {
       if (this.fileListIndex > -1) {
-        const width = getWidth()
+        const width = getWidth('#draw_range .modal-body')
         edit.canvasResize(width, (width / ratio) >> 0)
       }
     }, 200))
@@ -282,14 +310,13 @@ export default {
       this.fileListIndex = index
       this.isShow = true
       this.$nextTick(() => {
-        const width = getWidth()
+        const width = getWidth('#draw_range .modal-body')
         edit.canvas.width = width
         edit.canvas.height = (width / ratio) >> 0
         edit.open(file)
       })
     },
     close (index) {
-      console.log(index)
       edit.close()
       this.isShow = false
       this.fileListIndex = -1
@@ -388,10 +415,6 @@ export default {
   max-width: 900px;
   margin:0 auto;
   input {
-    border-top:none;
-    border-left:none;
-    border-right:none;
-    outline: none;
     &[type=file] {
       width:0;
     }
@@ -399,9 +422,6 @@ export default {
   .info {
     border-bottom:1px dotted #ccc;
     padding:1em 0;
-  }
-  .btn {
-    margin:0 .75em;
   }
 }
 #canvas {
@@ -428,7 +448,7 @@ export default {
   }
 }
 .current {
-  color:red;
+  background-color: rgba(0,0,0,.075);
 }
 .jmessage .message-box.pop-box {
   width:800px;
