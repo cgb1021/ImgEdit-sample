@@ -1,17 +1,15 @@
 <template>
   <div class="img-edit">
     <h1>ImgEdit sample</h1>
-    <Modal :is-show="isShow" @close="close">
-      <div id="draw_range">
-        <canvas id="canvas"></canvas>
-        <div class="info">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
-        <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn text="调整" @click.native="resize"/></div>
-        <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn text="裁剪" @click.native="cut"/></div>
-        <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.scale + .1)"/><Btn text="缩小" @click.native="scale(state.scale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
-        <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="保存" @click.native="save"/></div>
-      </div>
+    <Modal id="draw_range" title="编辑器" buttons="" :is-show="isShow" @close="close">
+      <canvas id="canvas"></canvas>
+      <div class="info">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
+      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn text="调整" @click.native="resize"/></div>
+      <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn text="裁剪" @click.native="cut"/></div>
+      <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.scale + .1)"/><Btn text="缩小" @click.native="scale(state.scale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
+      <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="保存" @click.native="save"/></div>
     </Modal>
-    <form action="">
+    <form action="" id="input_range">
       <label>选择本地图片 <input type="file" name="" multiple accept="image/*" id="file_input"><Btn text="选择"/></label>
       <label>输入在线图片 <input type="text" v-model="url"><Btn text="加载" @click.native="fetch"/></label>
     </form>
@@ -30,6 +28,7 @@ import SparkMD5 from 'spark-md5'
 import Btn from '../components/Btn'
 import Modal from '../components/Modal'
 let edit
+const ratio = 4 / 3 // 4:3
 export default {
   name: 'sample',
   components: { Btn, Modal },
@@ -87,28 +86,27 @@ export default {
         console.log('after')
       } */
     })
-    const drawRange = document.getElementById('draw_range')
-    drawRange.addEventListener('transitionend', e => {
-      console.log(e)
-    })
-    drawRange.addEventListener('dragenter', e => {
+    const inputRange = document.getElementById('input_range')
+    let elemetnNode = null
+    inputRange.addEventListener('dragenter', e => {
       e.preventDefault()
-      drawRange.classList.add('active')
+      elemetnNode = e.target
+      inputRange.classList.add('active')
     })
-    drawRange.addEventListener('dragleave', e => {
+    inputRange.addEventListener('dragleave', e => {
       e.preventDefault()
-      drawRange.classList.remove('active')
+      if (elemetnNode === e.target) inputRange.classList.remove('active')
     })
-    drawRange.addEventListener('dragover', e => {
+    inputRange.addEventListener('dragover', e => {
       e.preventDefault()
     })
-    drawRange.addEventListener('drop', e => {
+    inputRange.addEventListener('drop', e => {
       e.preventDefault()
       for (const f of e.dataTransfer.files) {
         this.add(f)
       }
       // this.add(e.dataTransfer.files[0])
-      drawRange.classList.remove('active')
+      inputRange.classList.remove('active')
     })
     document.getElementById('file_input').addEventListener('change', e => {
       for (const f of e.target.files) {
@@ -119,6 +117,12 @@ export default {
     edit.onChange((state) => {
       console.log('edit.onChange', state)
       Object.assign(this.state, state)
+    })
+    window.addEventListener('resize', (e) => {
+      if (this.fileListIndex > -1) {
+        const width = document.querySelector('#draw_range .modal-body').offsetWidth
+        edit.canvasResize(width, (width / ratio) >> 0)
+      }
     })
     /* resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
       const img = new Image()
@@ -198,6 +202,14 @@ export default {
             height: edit.height(),
             md5
           }) */
+          if (this.fileList.length) {
+            for (let i = this.fileList.length - 1; i >= 0; --i) {
+              if (this.fileList[i].md5 === md5) {
+                console.log(`重复: ${file.name}`)
+                return
+              }
+            }
+          }
           if (index < 0) {
             this.fileList.push({
               name: file.name,
@@ -225,10 +237,16 @@ export default {
     open (index) {
       const file = this.fileList[index].file
       this.fileListIndex = index
-      edit.open(file)
+      this.$nextTick(() => {
+        const width = document.querySelector('#draw_range .modal-body').offsetWidth
+        edit.canvas.width = width
+        edit.canvas.height = (width / ratio) >> 0
+        edit.open(file)
+      })
       this.isShow = true
     },
-    close () {
+    close (index) {
+      console.log(index)
       edit.close()
       this.isShow = false
       this.fileListIndex = -1
@@ -344,13 +362,23 @@ export default {
   }
 }
 #canvas {
-  border: 1px solid black;
+  // border: 1px solid black;
 }
 #draw_range {
-  overflow: hidden;
-  transition: .25s height linear;
+  .modal-dialog {
+    max-width: 100%;
+    max-height: 100%;
+    margin:0 auto;
+    transform: none;
+  }
+  .modal-content {
+    max-height: 100%;
+  }
+}
+#input_range {
+  border: 1px dotted #eee;
   &.active {
-    border: 1px dotted #eee;
+    border-color: #ccc;
   }
 }
 .current {
