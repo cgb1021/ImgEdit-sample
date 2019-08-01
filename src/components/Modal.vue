@@ -1,6 +1,6 @@
 <template>
   <div class="modal fade" tabindex="-1" role="dialog" :style="{'display': isShow ? 'block' : 'none', 'opacity': opacity}">
-    <div class="modal-dialog modal-dialog-scrollable" role="document">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header" v-if="title">
           <h5 class="modal-title">{{title}}</h5>

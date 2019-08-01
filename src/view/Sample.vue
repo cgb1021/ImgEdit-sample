@@ -29,6 +29,49 @@ import Btn from '../components/Btn'
 import Modal from '../components/Modal'
 let edit
 const ratio = 4 / 3 // 4:3
+function throttle (func, wait, options) {
+  /* eslint-disable */
+  var context, args, result;
+  var timeout = null;
+  // 上次执行时间点
+  var previous = 0;
+  if (!options) options = {};
+  // 延迟执行函数
+  var later = function() {
+    // 若设定了开始边界不执行选项，上次执行时间始终为0
+    previous = options.leading === false ? 0 : Date.now();
+    timeout = null;
+    result = func.apply(context, args);
+    if (!timeout) context = args = null;
+  };
+  return function() {
+    var now = Date.now();
+    // 首次执行时，如果设定了开始边界不执行选项，将上次执行时间设定为当前时间。
+    if (!previous && options.leading === false) previous = now;
+    // 延迟执行时间间隔
+    var remaining = wait - (now - previous);
+    context = this;
+    args = arguments;
+    // 延迟时间间隔remaining小于等于0，表示上次执行至此所间隔时间已经超过一个时间窗口
+    // remaining大于时间窗口wait，表示客户端系统时间被调整过
+    if (remaining <= 0 || remaining > wait) {
+      clearTimeout(timeout);
+      timeout = null;
+      previous = now;
+      result = func.apply(context, args);
+      if (!timeout) context = args = null;
+    //如果延迟执行不存在，且没有设定结尾边界不执行选项
+    } else if (!timeout && options.trailing !== false) {
+      timeout = setTimeout(later, remaining);
+    }
+    return result;
+  };
+}
+function getWidth () {
+  const node = document.querySelector('#draw_range .modal-body')
+  const style = window.getComputedStyle(node)
+  return node.clientWidth - window.parseInt(style['paddingLeft'], 10) - window.parseInt(style['paddingRight'], 10)
+}
 export default {
   name: 'sample',
   components: { Btn, Modal },
@@ -118,12 +161,12 @@ export default {
       console.log('edit.onChange', state)
       Object.assign(this.state, state)
     })
-    window.addEventListener('resize', (e) => {
+    window.addEventListener('resize', throttle(() => {
       if (this.fileListIndex > -1) {
-        const width = document.querySelector('#draw_range .modal-body').offsetWidth
+        const width = getWidth()
         edit.canvasResize(width, (width / ratio) >> 0)
       }
-    })
+    }, 200))
     /* resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
       const img = new Image()
       img.onload = () => {
@@ -237,13 +280,13 @@ export default {
     open (index) {
       const file = this.fileList[index].file
       this.fileListIndex = index
+      this.isShow = true
       this.$nextTick(() => {
-        const width = document.querySelector('#draw_range .modal-body').offsetWidth
+        const width = getWidth()
         edit.canvas.width = width
         edit.canvas.height = (width / ratio) >> 0
         edit.open(file)
       })
-      this.isShow = true
     },
     close (index) {
       console.log(index)
@@ -373,6 +416,9 @@ export default {
   }
   .modal-content {
     max-height: 100%;
+  }
+  .modal-dialog-scrollable .modal-body {
+    overflow-x: hidden;
   }
 }
 #input_range {
