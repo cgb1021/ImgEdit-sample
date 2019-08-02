@@ -3,11 +3,10 @@
     <h1>ImgEdit sample</h1>
     <Modal id="draw_range" title="编辑器" buttons="" :is-show="isShow" @close="close">
       <canvas id="canvas"></canvas>
-      <div class="info">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
-      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn class="btn-sm ml-2" text="调整" @click.native="resize"/></div>
-      <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn class="btn-sm ml-2" text="裁剪" @click.native="cut"/></div>
-      <div class="info tool"><Btn class="btn-sm" text="逆时针90度" @click.native="rotate(-.5)"/><Btn class="btn-sm ml-2 mr-2" text="顺时针90度" @click.native="rotate(.5)"/><Btn class="btn-sm" text="放大" @click.native="scale(state.scale + .1)"/><Btn class="btn-sm ml-2 mr-2" text="缩小" @click.native="scale(state.scale - .1)"/><Btn class="btn-sm mr-2" text="平铺" @click.native="scale(1)"/><Btn class="btn-sm" text="居中" @click.native="align('center')"/></div>
-      <div class="info tool"><Btn class="btn-sm" text="清理" @click.native="clean"/><Btn class="btn-sm ml-2 mr-2" text="重置" @click.native="reset"/><Btn class="btn-sm mr-2" text="预览" @click.native="preview"/><Btn class="btn-sm" text="保存" @click.native="save"/></div>
+      <div class="form-row justify-content-center pt-3 pb-3 border-bottom">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
+      <div class="form-row justify-content-center pt-3 pb-3 border-bottom"><div class="col-auto">（高x宽）</div><div class="col-auto"><input class="form-control" type="text" v-model="width" placeholder="width"></div><div class="col-auto">x</div><div class="col-auto"><input class="form-control" type="text" v-model="height" placeholder="height"></div><div class="col-auto"><Btn class="btn-sm ml-2" text="调整" @click.native="resize"/></div></div>
+      <div class="form-row justify-content-center pt-3 pb-3 border-bottom"><div class="col-auto">（width,height,x,y）</div><div class="col-auto"><input class="form-control" type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"></div><div class="col-auto"><Btn class="btn-sm" text="裁剪" @click.native="cut"/></div></div>
+      <div class="form-row justify-content-center pt-3"><Btn class="btn-sm" text="逆时针90度" @click.native="rotate(-.5)"/><Btn class="btn-sm ml-2 mr-2" text="顺时针90度" @click.native="rotate(.5)"/><Btn class="btn-sm" text="放大" @click.native="scale(state.scale + .1)"/><Btn class="btn-sm ml-2 mr-2" text="缩小" @click.native="scale(state.scale - .1)"/><Btn class="btn-sm" text="平铺" @click.native="scale(1)"/><Btn class="btn-sm ml-2 mr-2" text="居中" @click.native="align('center')"/><Btn class="btn-sm" text="清理" @click.native="clean"/><Btn class="btn-sm ml-2 mr-2" text="重置" @click.native="reset"/><Btn class="btn-sm mr-2" text="预览" @click.native="preview"/><Btn class="btn-sm" primary="1" text="保存" @click.native="save"/></div>
     </Modal>
     <form class="mt-5 mb-5 p-3 text-justify" action="" id="input_range">
       <div class="form-group">
@@ -24,8 +23,8 @@
         <thead>
           <tr>
             <th scope="col">名称</th>
+            <th scope="col">尺寸</th>
             <th scope="col">大小</th>
-            <th scope="col">md5</th>
             <th scope="col">结果</th>
             <th scope="col">操作</th>
           </tr>
@@ -33,10 +32,10 @@
         <tbody v-if="fileList.length">
           <tr v-for="(file, index) in fileList" :key="index" :class="{'current': fileListIndex === index}">
             <th>{{file.name}}</th>
+            <td>{{file.width}}x{{file.height}}</td>
             <td>{{getSize(file.size)}}</td>
-            <td>{{file.md5}}</td>
             <td>{{file.result}}</td>
-            <td><Btn class="btn-sm" text="编辑" @click.native="open(index)"/><Btn class="btn-sm ml-2 mr-2" text="上传" @click.native="upload(index)"/><Btn class="btn-sm mr-2" text="预览" @click.native="preview(index)"/><Btn class="btn-sm" text="移除" @click.native="remove(index)"/></td>
+            <td><Btn class="btn-sm" text="编辑" @click.native="open(index)"/><Btn class="btn-sm ml-2 mr-2" text="预览" @click.native="preview(index)"/><Btn class="btn-sm mr-2" text="上传" primary="1" @click.native="upload(index)"/><Btn class="btn-sm btn-danger" text="移除" @click.native="remove(index)"/></td>
           </tr>
         </tbody>
         <tbody v-else>
@@ -50,13 +49,14 @@
 </template>
 
 <script>
-import ImgEdit, { fetchImg, preview/* , resize, cut, rotate */ } from 'imgedit'
+import ImgEdit, { fetchImg, preview, readFile, loadImg/* , resize, cut, rotate */ } from 'imgedit'
 import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from '../components/Btn'
 import Modal from '../components/Modal'
 let edit
 const ratio = 4 / 3 // 4:3
+const fileStore = {}
 function throttle (func, wait, options) {
   /* eslint-disable */
   var context, args, result;
@@ -264,15 +264,6 @@ export default {
         } else {
           // 数据块加载结束
           md5 = spark.end()
-          // await edit.open(file)
-          // edit.draw()
-          /* this.files.push({
-            name: file.name,
-            size: file.size,
-            width: edit.width(),
-            height: edit.height(),
-            md5
-          }) */
           if (this.fileList.length) {
             for (let i = this.fileList.length - 1; i >= 0; --i) {
               if (this.fileList[i].md5 === md5) {
@@ -287,15 +278,23 @@ export default {
               size: file.size,
               type: file.type,
               result: 'ready',
-              md5,
-              file
+              width: 0,
+              height: 0,
+              md5
             })
+            index = this.fileList.length - 1
           } else {
             this.fileList[index].size = file.size
             this.fileList[index].md5 = md5
             this.fileList[index].result = 'ready'
-            this.fileList[index].file = file
           }
+          fileStore[index] = file
+          readFile(file).then((res) => {
+            loadImg(res).then((img) => {
+              this.fileList[index].width = img.width
+              this.fileList[index].height = img.height
+            })
+          })
         }
       }
       function loadNext () {
@@ -306,7 +305,11 @@ export default {
       loadNext()
     },
     open (index) {
-      const file = this.fileList[index].file
+      const file = fileStore[index]
+      if (!file) {
+        console.log('open error')
+        return
+      }
       this.fileListIndex = index
       this.isShow = true
       this.$nextTick(() => {
@@ -323,6 +326,7 @@ export default {
     },
     remove (index) {
       this.fileList.splice(index, 1)
+      fileStore[index] = null
     },
     save () {
       if (!edit.img) return
@@ -363,7 +367,12 @@ export default {
       }
     },
     preview (index) {
-      preview(this.fileList[index].file).then((img) => {
+      const file = fileStore[index]
+      if (!file) {
+        console.log('preview error')
+        return
+      }
+      preview(file).then((img) => {
         const box = message.pop().append(img)
         window.setTimeout(() => {
           box.center()
@@ -371,9 +380,14 @@ export default {
       })
     },
     upload (index) {
+      const file = fileStore[index]
+      if (!file) {
+        console.log('upload error')
+        return
+      }
       const res = this.fileList[index]
       const fd = new FormData()
-      fd.append('image', res.file)
+      fd.append('image', file)
       const xhr = new XMLHttpRequest()
       xhr.onload = (e) => {
         if (e.target.responseText === '1') {
@@ -415,10 +429,6 @@ export default {
     &[type=file] {
       width:0;
     }
-  }
-  .info {
-    border-bottom:1px dotted #ccc;
-    padding:1em 0;
   }
 }
 #canvas {

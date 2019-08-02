@@ -1,5 +1,6 @@
 <?php
 // var_dump($_FILES['image']);
+error_reporting(0);
 header('Access-Control-Allow-Origin: *');
 if ($_FILES['image'] && !$_FILES['image']['error']) {
   $arr = explode('.', $_FILES['image']['name']);
