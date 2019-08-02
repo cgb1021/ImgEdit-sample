@@ -1,5 +1,5 @@
 <template>
-  <div class="btn btn-secondary" :class="{'btn-secondary': !primary, 'btn-primary': primary}">
+  <div class="btn" :class="{'btn-secondary': !primary, 'btn-primary': primary}">
     {{text}}
   </div>
 </template>

@@ -4,19 +4,19 @@
     <Modal id="draw_range" title="编辑器" buttons="" :is-show="isShow" @close="close">
       <canvas id="canvas"></canvas>
       <div class="info">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
-      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn text="调整" @click.native="resize"/></div>
-      <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn text="裁剪" @click.native="cut"/></div>
-      <div class="info tool"><Btn text="逆时针90度" @click.native="rotate(-.5)"/><Btn text="顺时针90度" @click.native="rotate(.5)"/><Btn text="放大" @click.native="scale(state.scale + .1)"/><Btn text="缩小" @click.native="scale(state.scale - .1)"/><Btn text="平铺" @click.native="scale(1)"/><Btn text="居中" @click.native="align('center')"/></div>
-      <div class="info tool"><Btn text="清理" @click.native="clean"/><Btn text="重置" @click.native="reset"/><Btn text="预览" @click.native="preview"/><Btn text="保存" @click.native="save"/></div>
+      <div class="info">（高x宽）<input type="text" v-model="width" placeholder="width">x<input type="text" v-model="height" placeholder="height"><Btn class="btn-sm ml-2" text="调整" @click.native="resize"/></div>
+      <div class="info">（width,height,x,y）<input type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"><Btn class="btn-sm ml-2" text="裁剪" @click.native="cut"/></div>
+      <div class="info tool"><Btn class="btn-sm" text="逆时针90度" @click.native="rotate(-.5)"/><Btn class="btn-sm ml-2 mr-2" text="顺时针90度" @click.native="rotate(.5)"/><Btn class="btn-sm" text="放大" @click.native="scale(state.scale + .1)"/><Btn class="btn-sm ml-2 mr-2" text="缩小" @click.native="scale(state.scale - .1)"/><Btn class="btn-sm mr-2" text="平铺" @click.native="scale(1)"/><Btn class="btn-sm" text="居中" @click.native="align('center')"/></div>
+      <div class="info tool"><Btn class="btn-sm" text="清理" @click.native="clean"/><Btn class="btn-sm ml-2 mr-2" text="重置" @click.native="reset"/><Btn class="btn-sm mr-2" text="预览" @click.native="preview"/><Btn class="btn-sm" text="保存" @click.native="save"/></div>
     </Modal>
     <form class="mt-5 mb-5 p-3 text-justify" action="" id="input_range">
       <div class="form-group">
-        <label>选择本地图片 <input type="file" name="" multiple accept="image/*" id="file_input"><Btn text="选择"/></label>
+        <label>选择本地图片 <input type="file" name="" multiple accept="image/*" id="file_input"><Btn primary="1" text="选择"/></label>
       </div>
       <div class="form-row">
         <div class="col-auto"><label for="url_input">输入在线图片</label></div>
         <div class="col-8"><input type="text" class="form-control" id="url_input" aria-describedby="emailHelp" placeholder="https://" v-model="url"></div>
-        <div class="col-auto"><Btn text="加载" @click.native="fetch"/></div>
+        <div class="col-auto"><Btn primary="1" text="加载" @click.native="fetch"/></div>
       </div>
     </form>
     <div class="filelist mt-5 mb-5">
@@ -36,7 +36,7 @@
             <td>{{getSize(file.size)}}</td>
             <td>{{file.md5}}</td>
             <td>{{file.result}}</td>
-            <td><Btn text="编辑" @click.native="open(index)"/> <Btn text="上传" @click.native="upload(index)"/> <Btn text="移除" @click.native="remove(index)"/></td>
+            <td><Btn class="btn-sm" text="编辑" @click.native="open(index)"/><Btn class="btn-sm ml-2 mr-2" text="上传" @click.native="upload(index)"/><Btn class="btn-sm mr-2" text="预览" @click.native="preview(index)"/><Btn class="btn-sm" text="移除" @click.native="remove(index)"/></td>
           </tr>
         </tbody>
         <tbody v-else>
@@ -50,7 +50,7 @@
 </template>
 
 <script>
-import ImgEdit, { fetchImg/* , resize, cut, rotate */ } from 'imgedit'
+import ImgEdit, { fetchImg, preview/* , resize, cut, rotate */ } from 'imgedit'
 import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from '../components/Btn'
@@ -362,16 +362,13 @@ export default {
         }
       }
     },
-    preview () {
-      if (!edit.img) return
-      const img = new Image()
-      img.onload = () => {
+    preview (index) {
+      preview(this.fileList[index].file).then((img) => {
         const box = message.pop().append(img)
         window.setTimeout(() => {
           box.center()
         }, 0)
-      }
-      img.src = edit.toDataURL()
+      })
     },
     upload (index) {
       const res = this.fileList[index]
@@ -451,12 +448,15 @@ export default {
   background-color: rgba(0,0,0,.075);
 }
 .jmessage .message-box.pop-box {
-  width:800px;
+  // max-width:800px;
   .message-box__head {
     font-size: 0;
   }
   .message-box__body {
     text-align: center;
+    img {
+      width: 100%;
+    }
   }
   .message-box__foot {
     display: none;
