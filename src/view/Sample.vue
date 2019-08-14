@@ -6,7 +6,7 @@
       <div class="form-row justify-content-center pt-3 pb-3 border-bottom">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
       <div class="form-row justify-content-center pt-3 pb-3 border-bottom"><div class="col-auto">（高x宽）</div><div class="col-auto"><input class="form-control" type="text" v-model="width" placeholder="width"></div><div class="col-auto">x</div><div class="col-auto"><input class="form-control" type="text" v-model="height" placeholder="height"></div><div class="col-auto"><Btn class="btn-sm ml-2" text="调整" @click.native="resize"/></div></div>
       <div class="form-row justify-content-center pt-3 pb-3 border-bottom"><div class="col-auto">（width,height,x,y）</div><div class="col-auto"><input class="form-control" type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"></div><div class="col-auto"><Btn class="btn-sm" text="裁剪" @click.native="cut"/></div></div>
-      <div class="form-row justify-content-center pt-3"><Btn class="btn-sm" text="逆时针90度" @click.native="rotate(-.5)"/><Btn class="btn-sm ml-2 mr-2" text="顺时针90度" @click.native="rotate(.5)"/><Btn class="btn-sm" text="放大" @click.native="scale(state.scale + .1)"/><Btn class="btn-sm ml-2 mr-2" text="缩小" @click.native="scale(state.scale - .1)"/><Btn class="btn-sm" text="平铺" @click.native="scale(1)"/><Btn class="btn-sm ml-2 mr-2" text="居中" @click.native="align('center')"/><Btn class="btn-sm" text="清理" @click.native="clean"/><Btn class="btn-sm ml-2 mr-2" text="重置" @click.native="reset"/><Btn class="btn-sm mr-2" text="预览" @click.native="preview"/><Btn class="btn-sm" primary="1" text="保存" @click.native="save"/></div>
+      <div class="form-row justify-content-center pt-3"><Btn class="btn-sm" text="逆时针90度" @click.native="rotate(-.5)"/><Btn class="btn-sm ml-2 mr-2" text="顺时针90度" @click.native="rotate(.5)"/><Btn class="btn-sm" text="放大" @click.native="scale(state.scale + .1)"/><Btn class="btn-sm ml-2 mr-2" text="缩小" @click.native="scale(state.scale - .1)"/><Btn class="btn-sm" text="平铺" @click.native="scale(1)"/><Btn class="btn-sm ml-2 mr-2" text="居中" @click.native="align('center')"/><Btn class="btn-sm" text="清理" @click.native="clean"/><Btn class="btn-sm ml-2 mr-2" text="重置" @click.native="reset"/><Btn class="btn-sm mr-2" text="预览" @click.native="preview(-1)"/><Btn class="btn-sm" primary="1" text="保存" @click.native="save"/></div>
     </Modal>
     <form class="mt-5 mb-5 p-3 text-justify" action="" id="input_range">
       <div class="form-group">
@@ -367,6 +367,15 @@ export default {
       }
     },
     preview (index) {
+      if (index < 0) {
+        loadImg(edit.toDataURL('image/png')).then((img) => {
+          const box = message.pop().append(img)
+          window.setTimeout(() => {
+            box.center()
+          }, 0)
+        })
+        return
+      }
       const file = fileStore[index]
       if (!file) {
         console.log('preview error')
