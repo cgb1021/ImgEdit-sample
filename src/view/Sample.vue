@@ -31,13 +31,13 @@
           </tr>
         </thead>
         <tbody v-if="fileList.length">
-          <tr v-for="(file, index) in fileList" :key="index" :class="{'current': fileListIndex === index, 'checked': file.check}">
-            <td><input class="form-check-input" type="checkbox" @click="check(index, $event)"></td>
+          <tr v-for="(file, index) in fileList" :key="index" :class="{'table-active': fileListIndex === index || file.check, 'table-danger': file.status > 1}">
+            <td><input class="form-check-input" type="checkbox" :class="[`form-check-input-${index}`]" @click="check(index, $event)" :disabled="!file.status"></td>
             <td>{{file.name}}</td>
             <td>{{file.width}}x{{file.height}}</td>
             <td>{{getSize(file.size)}}</td>
             <td>{{file.result}}</td>
-            <td><Btn class="btn-sm" text="编辑" @click.native="open(index)"/><Btn class="btn-sm ml-2 mr-2" text="预览" @click.native="preview(index)"/><Btn class="btn-sm mr-2" text="上传" primary="1" v-if="file.status === 0" @click.native="upload(index)"/><Btn class="btn-sm mr-2" text="上传" v-else/><Btn class="btn-sm btn-danger" text="移除" @click.native="remove(index)"/></td>
+            <td><Btn class="btn-sm" text="编辑" @click.native="open(index)"/><Btn class="btn-sm ml-2 mr-2" text="预览" @click.native="preview(index)"/><Btn class="btn-sm mr-2" text="取消" v-if="file.status === -1" @click.native="abort(index)"/><Btn class="btn-sm mr-2" text="上传" primary="1" v-else-if="file.status !== 0" @click.native="upload(index)"/><Btn class="btn-sm btn-danger" text="移除" @click.native="remove(index)"/></td>
           </tr>
         </tbody>
         <tbody v-else>
@@ -45,6 +45,7 @@
             <td colspan="6" class="text-center">空空如也~~</td>
           </tr>
         </tbody>
+        <caption>{{fileList.length}}</caption>
       </table>
     </div>
   </div>
@@ -59,6 +60,7 @@ import Modal from '../components/Modal'
 let edit
 const ratio = 4 / 3 // 4:3
 const fileStore = {}
+const ajax = {}
 function throttle (func, wait, options) {
   /* eslint-disable */
   var context, args, result;
@@ -287,7 +289,7 @@ export default {
               size: file.size,
               type: file.type,
               result: 'ready',
-              status: 0, // 0 准备 1 成功 -1 上传中
+              status: 1, // -1 上传中 0 成功 1 准备 >1 ajax失败
               check: false,
               width: 0,
               height: 0,
@@ -297,7 +299,7 @@ export default {
           } else {
             this.fileList[index].size = file.size
             this.fileList[index].md5 = md5
-            this.fileList[index].status = 0
+            this.fileList[index].status = 1
             this.fileList[index].result = 'ready'
           }
           fileStore[index] = file
@@ -423,10 +425,12 @@ export default {
       fd.append('image', file)
       const xhr = new XMLHttpRequest()
       xhr.onload = (e) => {
-        res.status = 0
+        ajax[index] = null
+        res.status = 2
         if (e.target.responseText === '1') {
           res.result = 'success'
-          res.status = 1
+          res.status = 0
+          document.querySelector(`form-check-input-${index}`).checked = false
         } else if (e.target.responseText === '0') {
           res.result = 'fail'
         } else {
@@ -434,11 +438,20 @@ export default {
         }
       }
       xhr.onerror = (e) => {
-        res.status = 0
+        ajax[index] = null
+        res.status = 3
         res.result = 'error'
       }
       xhr.open('POST', '//127.0.0.1/server/upload.php')
       xhr.send(fd)
+      ajax[index] = xhr
+    },
+    abort (index) {
+      if (ajax[index]) {
+        ajax[index].abort()
+        this.fileList[index].status = 1
+        this.fileList[index].result = 'abort'
+      }
     },
     getSize (size, len = 2) {
       const text = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -492,10 +505,6 @@ export default {
   &.active {
     border-color: #ccc;
   }
-}
-.checked,
-.current {
-  background-color: rgba(0,0,0,.075);
 }
 .jmessage .message-box.pop-box {
   // max-width:800px;
