@@ -22,15 +22,17 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col">选择</th>
             <th scope="col">名称</th>
             <th scope="col">尺寸</th>
             <th scope="col">大小</th>
-            <th scope="col">结果</th>
+            <th scope="col">状态</th>
             <th scope="col">操作</th>
           </tr>
         </thead>
         <tbody v-if="fileList.length">
-          <tr v-for="(file, index) in fileList" :key="index" :class="{'current': fileListIndex === index}">
+          <tr v-for="(file, index) in fileList" :key="index" :class="{'current': fileListIndex === index, 'checked': file.check}">
+            <td><input class="form-check-input" type="checkbox" @click="check(index, $event)"></td>
             <td>{{file.name}}</td>
             <td>{{file.width}}x{{file.height}}</td>
             <td>{{getSize(file.size)}}</td>
@@ -40,7 +42,7 @@
         </tbody>
         <tbody v-else>
           <tr>
-            <td colspan="5" class="text-center">空空如也~~</td>
+            <td colspan="6" class="text-center">空空如也~~</td>
           </tr>
         </tbody>
       </table>
@@ -49,7 +51,7 @@
 </template>
 
 <script>
-import ImgEdit, { fetchImg, preview, readFile, loadImg/* , resize, cut, rotate */ } from 'imgedit'
+import ImgEdit, { fetchImg, preview, readFile, loadImg/* , resize, cut, rotate */} from 'imgedit'
 import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from '../components/Btn'
@@ -154,7 +156,7 @@ export default {
         }
       }/* ,
       after: () => {
-        console.log('after')
+        message.toast('after')
       } */
     })
     const inputRange = document.getElementById('input_range')
@@ -183,10 +185,11 @@ export default {
       for (const f of e.target.files) {
         this.add(f)
       }
+      e.target.value = ''
       // this.add(e.target.files[0])
     })
     edit.onChange((state) => {
-      console.log('edit.onChange', state)
+      // console.log('edit.onChange', state)
       Object.assign(this.state, state)
     })
     window.addEventListener('resize', throttle(() => {
@@ -195,30 +198,36 @@ export default {
         edit.canvasResize(width, (width / ratio) >> 0)
       }
     }, 200))
-    /* resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
+    /* loadImg('https://t12.baidu.com/it/u=54104471,2172971201&fm=76').then((img) => {
+      const box = message.pop().text('origin', '.message-box__head>h6').append(img)
+      window.setTimeout(() => {
+        box.center()
+      }, 0)
+    })
+    resize('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100).then((b64) => {
       const img = new Image()
       img.onload = () => {
-        const box = message.pop().append(img)
+        const box = message.pop().text('resize', '.message-box__head>h6').append(img)
         window.setTimeout(() => {
           box.center()
         }, 0)
       }
       img.src = b64
-    }) */
-    /* cut('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100, 100, 50, 50).then((b64) => {
+    })
+    cut('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 100, 100, 50, 50).then((b64) => {
       const img = new Image()
       img.onload = () => {
-        const box = message.pop().append(img)
+        const box = message.pop().text('cut', '.message-box__head>h6').append(img)
         window.setTimeout(() => {
           box.center()
         }, 0)
       }
       img.src = b64
-    }) */
-    /* rotate('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', 90).then((b64) => {
+    })
+    rotate('https://t12.baidu.com/it/u=54104471,2172971201&fm=76', -180).then((b64) => {
       const img = new Image()
       img.onload = () => {
-        const box = message.pop().append(img)
+        const box = message.pop().text('rotate', '.message-box__head>h6').append(img)
         window.setTimeout(() => {
           box.center()
         }, 0)
@@ -232,19 +241,19 @@ export default {
         fetchImg(this.url).then((img) => {
           this.add(img)
         }).catch((e) => {
-          console.log('加载图片失败')
+          message.toast('加载图片失败')
         })
       }
     },
     async add (file, index = -1) {
       if (index === -1) {
         if (!/\.(?:png|jpg|jpeg|gif|bmp)$/i.test(file.name)) {
-          console.log('非图片')
+          message.toast('只能上传图片')
           return false
         }
-        const maxSize = 500 * 1024 // 500kb
+        const maxSize = 500 * 1024 // 500KB
         if (file.size > maxSize) {
-          console.log(`超出大小: ${this.getSize(file.size - maxSize)}`)
+          message.toast(`图片超出大小: ${this.getSize(file.size - maxSize)}`)
           return false
         }
       }
@@ -267,7 +276,7 @@ export default {
           if (this.fileList.length) {
             for (let i = this.fileList.length - 1; i >= 0; --i) {
               if (this.fileList[i].md5 === md5) {
-                console.log(`重复: ${file.name}`)
+                message.toast(`该图片已在列表: ${file.name}`)
                 return
               }
             }
@@ -279,6 +288,7 @@ export default {
               type: file.type,
               result: 'ready',
               status: 0, // 0 准备 1 成功 -1 上传中
+              check: false,
               width: 0,
               height: 0,
               md5
@@ -309,7 +319,7 @@ export default {
     open (index) {
       const file = fileStore[index]
       if (!file) {
-        console.log('open error')
+        message.toast('编辑器打开错误')
         return
       }
       this.fileListIndex = index
@@ -371,6 +381,9 @@ export default {
         }
       }
     },
+    check (index, e) {
+      this.fileList[index].check = e.target.checked
+    },
     preview (index) {
       if (index < 0) {
         loadImg(edit.toDataURL('image/png')).then((img) => {
@@ -383,7 +396,7 @@ export default {
       }
       const file = fileStore[index]
       if (!file) {
-        console.log('preview error')
+        message.toast('预览错误')
         return
       }
       preview(file).then((img) => {
@@ -396,15 +409,16 @@ export default {
     upload (index) {
       const res = this.fileList[index]
       if (res.status === -1) {
-        console.log('uploading...')
+        message.toast('图片上传中，请稍后')
         return
       }
       const file = fileStore[index]
       if (!file) {
-        console.log('upload error')
+        message.toast('上传文件不存在')
         return
       }
       res.status = -1
+      res.result = 'uploading'
       const fd = new FormData()
       fd.append('image', file)
       const xhr = new XMLHttpRequest()
@@ -479,6 +493,7 @@ export default {
     border-color: #ccc;
   }
 }
+.checked,
 .current {
   background-color: rgba(0,0,0,.075);
 }
@@ -486,11 +501,14 @@ export default {
   // max-width:800px;
   .message-box__head {
     font-size: 0;
+    >h6 {
+      margin-bottom:0;
+    }
   }
   .message-box__body {
     text-align: center;
     img {
-      width: 100%;
+      max-width: 100%;
     }
   }
   .message-box__foot {
