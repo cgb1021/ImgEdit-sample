@@ -6,5 +6,10 @@ if ($_FILES['image'] && !$_FILES['image']['error']) {
   // sleep(5);
   $arr = explode('.', $_FILES['image']['name']);
   $ext = $arr[count($arr) - 1];
-  echo move_uploaded_file($_FILES['image']['tmp_name'], $_SERVER['DOCUMENT_ROOT'] . '/server/upload/'.$_SERVER['REQUEST_TIME'].'.'.($ext ? $ext : 'jpg'));
-} else echo 'empty';
+  $name = $_SERVER['REQUEST_TIME'] . '.' . ($ext ? $ext : 'jpg');
+  if (move_uploaded_file($_FILES['image']['tmp_name'], $_SERVER['DOCUMENT_ROOT'] . '/server/upload/' . $name)) {
+    echo '{"result": 0, "msg": "' . $_FILES['image']['name'] . ',' . $name . '"}';
+  } else {
+    echo '{"result": 1, "msg": "' . $_FILES['image']['name'] . '"}';
+  }
+} else echo '{"result": 1, "msg": "empty"}';

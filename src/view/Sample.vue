@@ -32,12 +32,12 @@
         </thead>
         <tbody v-if="fileList.length">
           <tr v-for="(file, index) in fileList" :key="index" :class="{'table-active': fileListIndex === index || file.check, 'table-danger': file.status > 1}">
-            <td><input class="form-check-input" type="checkbox" :class="[`form-check-input-${index}`]" @click="check(index, $event)" :disabled="!file.status"></td>
+            <td><input class="form-check-input" type="checkbox" :class="[`form-check-input-${index}`]" @click="check(index, $event)" :disabled="file.status < 1"></td>
             <td>{{file.name}}</td>
             <td>{{file.width}}x{{file.height}}</td>
             <td>{{getSize(file.size)}}</td>
             <td>{{file.result}}</td>
-            <td><Btn class="btn-sm" text="编辑" @click.native="open(index)"/><Btn class="btn-sm ml-2 mr-2" text="预览" @click.native="preview(index)"/><Btn class="btn-sm mr-2" text="取消" v-if="file.status === -1" @click.native="abort(index)"/><Btn class="btn-sm mr-2" text="上传" primary="1" v-else-if="file.status !== 0" @click.native="upload(index)"/><Btn class="btn-sm btn-danger" text="移除" @click.native="remove(index)"/></td>
+            <td><Btn class="btn-sm" text="编辑" @click.native="open(index)"/><Btn class="btn-sm ml-2 mr-2" text="预览" @click.native="preview(index)"/><Btn class="btn-sm mr-2" text="取消" v-if="file.status === -1" @click.native="abort(index)"/><Btn class="btn-sm mr-2" text="上传" primary="1" v-else-if="file.status > 0" @click.native="upload(index)"/><Btn class="btn-sm mr-2" text="上传" v-else/><Btn class="btn-sm btn-danger" text="移除" @click.native="remove(index)"/></td>
           </tr>
         </tbody>
         <tbody v-else>
@@ -45,7 +45,7 @@
             <td colspan="6" class="text-center">空空如也~~</td>
           </tr>
         </tbody>
-        <caption>{{fileList.length}}</caption>
+        <caption>总{{fileList.length}} 成功{{successNum}} 失败{{failNum}}<Btn class="btn-sm ml-2 mr-2" text="全选" @click.native="selectAll()"/><Btn class="btn-sm ml-2 mr-2" text="反选" @click.native="selectReverse()"/><Btn class="btn-sm" text="批量上传" primary="1" @click.native="uploadAll"/></caption>
       </table>
     </div>
   </div>
@@ -248,6 +248,7 @@ export default {
       }
     },
     async add (file, index = -1) {
+      let md5 = ''
       if (index === -1) {
         if (!/\.(?:png|jpg|jpeg|gif|bmp)$/i.test(file.name)) {
           message.toast('只能上传图片')
@@ -255,7 +256,17 @@ export default {
         }
         const maxSize = 500 * 1024 // 500KB
         if (file.size > maxSize) {
-          message.toast(`图片超出大小: ${this.getSize(file.size - maxSize)}`)
+          this.fileList.push({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            result: `超出大小: ${this.getSize(file.size - maxSize)}`,
+            status: -2, // -1 上传中 0 成功 1 准备 >1 ajax失败
+            check: false,
+            width: 0,
+            height: 0,
+            md5
+          })
           return false
         }
       }
@@ -265,7 +276,6 @@ export default {
       const chunkSize = 2097152
       const chunks = Math.ceil(file.size / chunkSize)
       let currentChunk = 0
-      let md5 = ''
       fileReader.onload = (e) => {
         spark.append(e.target.result)
         currentChunk++
@@ -302,7 +312,7 @@ export default {
             this.fileList[index].status = 1
             this.fileList[index].result = 'ready'
           }
-          fileStore[index] = file
+          fileStore[md5] = file
           readFile(file).then((res) => {
             loadImg(res).then((img) => {
               this.fileList[index].width = img.width
@@ -319,7 +329,7 @@ export default {
       loadNext()
     },
     open (index) {
-      const file = fileStore[index]
+      const file = fileStore[this.fileList[index].md5]
       if (!file) {
         message.toast('编辑器打开错误')
         return
@@ -339,8 +349,8 @@ export default {
       this.fileListIndex = -1
     },
     remove (index) {
+      fileStore[this.fileList[index].md5] = null
       this.fileList.splice(index, 1)
-      fileStore[index] = null
     },
     save () {
       if (this.fileListIndex < 0) return
@@ -386,6 +396,22 @@ export default {
     check (index, e) {
       this.fileList[index].check = e.target.checked
     },
+    selectAll () {
+      this.fileList.forEach((item, index) => {
+        if (item.status > 0) {
+          item.check = true
+          document.querySelector(`.form-check-input-${index}`).checked = true
+        }
+      })
+    },
+    selectReverse () {
+      this.fileList.forEach((item, index) => {
+        if (item.status > 0) {
+          item.check = !item.check
+          document.querySelector(`.form-check-input-${index}`).checked = item.check
+        }
+      })
+    },
     preview (index) {
       if (index < 0) {
         loadImg(edit.toDataURL('image/png')).then((img) => {
@@ -396,7 +422,7 @@ export default {
         })
         return
       }
-      const file = fileStore[index]
+      const file = fileStore[this.fileList[index].md5]
       if (!file) {
         message.toast('预览错误')
         return
@@ -408,13 +434,19 @@ export default {
         }, 0)
       })
     },
+    uploadAll () {
+      let count = 0
+      this.fileList.forEach((item, index) => {
+        item.check && window.setTimeout(() => { this.upload(index) }, (count++) * 1000)
+      })
+    },
     upload (index) {
       const res = this.fileList[index]
       if (res.status === -1) {
         message.toast('图片上传中，请稍后')
         return
       }
-      const file = fileStore[index]
+      const file = fileStore[res.md5]
       if (!file) {
         message.toast('上传文件不存在')
         return
@@ -427,14 +459,16 @@ export default {
       xhr.onload = (e) => {
         ajax[index] = null
         res.status = 2
-        if (e.target.responseText === '1') {
+        // console.log(e.target.responseText, res)
+        const resp = window.JSON.parse(e.target.responseText)
+        if (resp.result === 0) {
           res.result = 'success'
           res.status = 0
-          document.querySelector(`form-check-input-${index}`).checked = false
+          document.querySelector(`.form-check-input-${index}`).checked = false
         } else if (e.target.responseText === '0') {
           res.result = 'fail'
         } else {
-          res.result = e.target.responseText
+          res.result = resp.msg
         }
       }
       xhr.onerror = (e) => {
@@ -466,6 +500,20 @@ export default {
   computed: {
     range () {
       return `${this.state.range.width},${this.state.range.height},${this.state.range.x},${this.state.range.y}`
+    },
+    successNum () {
+      let num = 0
+      this.fileList.forEach((item) => {
+        !item.status && ++num
+      })
+      return num
+    },
+    failNum () {
+      let num = 0
+      this.fileList.forEach((item) => {
+        item.status > 1 && ++num
+      })
+      return num
     }
   }
 }
