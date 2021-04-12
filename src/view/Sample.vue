@@ -1,12 +1,12 @@
 <template>
   <div class="img-edit">
-    <h1>ImgEdit sample</h1>
+    <h3>sample</h3>
     <Modal id="draw_range" title="编辑器" buttons="" :is-show="isShow" @close="close">
       <canvas id="canvas"></canvas>
-      <div class="form-row justify-content-center pt-3 pb-3 border-bottom">{{state.width}}px X {{state.height}}px @{{state.scale}}</div>
-      <div class="form-row justify-content-center pt-3 pb-3 border-bottom"><div class="col-auto">（高x宽）</div><div class="col-auto"><input class="form-control" type="text" v-model="width" placeholder="width"></div><div class="col-auto">x</div><div class="col-auto"><input class="form-control" type="text" v-model="height" placeholder="height"></div><div class="col-auto"><Btn class="btn-sm ml-2" text="调整" @click.native="resize"/></div></div>
+      <div class="form-row justify-content-center pt-3 pb-3 border-bottom">{{state.width}}px X {{state.height}}px ⊿{{state.angle}} @{{state.ratio.toFixed(2)}}</div>
+      <div class="form-row justify-content-center pt-3 pb-3 border-bottom"><div class="col-auto">（宽x高）</div><div class="col-auto"><input class="form-control" type="text" v-model="width" placeholder="width"></div><div class="col-auto">x</div><div class="col-auto"><input class="form-control" type="text" v-model="height" placeholder="height"></div><div class="col-auto"><Btn class="btn-sm ml-2" text="调整" @click.native="resize"/></div></div>
       <div class="form-row justify-content-center pt-3 pb-3 border-bottom"><div class="col-auto">（width,height,x,y）</div><div class="col-auto"><input class="form-control" type="text" :value="range" @change="change($event, 'range')" placeholder="width,height,x,y"></div><div class="col-auto"><Btn class="btn-sm" text="裁剪" @click.native="cut"/></div></div>
-      <div class="form-row justify-content-center pt-3"><Btn class="btn-sm" text="逆时针90度" @click.native="rotate(-.5)"/><Btn class="btn-sm ml-2 mr-2" text="顺时针90度" @click.native="rotate(.5)"/><Btn class="btn-sm" text="放大" @click.native="scale(state.scale + .1)"/><Btn class="btn-sm ml-2 mr-2" text="缩小" @click.native="scale(state.scale - .1)"/><Btn class="btn-sm" text="平铺" @click.native="scale(1)"/><Btn class="btn-sm ml-2 mr-2" text="居中" @click.native="align('center')"/><Btn class="btn-sm" text="清理" @click.native="clean"/><Btn class="btn-sm ml-2 mr-2" text="重置" @click.native="reset"/><Btn class="btn-sm mr-2" text="预览" @click.native="preview(-1)"/><Btn class="btn-sm" primary="1" text="保存" @click.native="save"/></div>
+      <div class="form-row justify-content-center pt-3"><Btn class="btn-sm" text="逆时针90度" @click.native="rotate(state.angle-30)"/><Btn class="btn-sm ml-2 mr-2" text="顺时针90度" @click.native="rotate(state.angle+30)"/><Btn class="btn-sm" text="放大" @click.native="scale(state.ratio + .1)"/><Btn class="btn-sm ml-2 mr-2" text="缩小" @click.native="scale(state.ratio - .1)"/><Btn class="btn-sm" text="平铺" @click.native="scale(1)"/><Btn class="btn-sm ml-2 mr-2" text="居中" @click.native="align('center')"/><Btn class="btn-sm" text="清理" @click.native="clean"/><Btn class="btn-sm ml-2 mr-2" text="重置" @click.native="reset"/><Btn class="btn-sm mr-2" text="预览" @click.native="preview(-1)"/><Btn class="btn-sm" primary="1" text="保存" @click.native="save"/></div>
     </Modal>
     <form class="mt-5 mb-5 p-3 text-justify" action="" id="input_range">
       <div class="form-group">
@@ -52,7 +52,8 @@
 </template>
 
 <script>
-import ImgEdit, { fetchImg, preview, readFile, loadImg/* , resize, cut, rotate */} from 'imgedit'
+import Editor, { fetchImg, preview, readFile, loadImg } from 'imgedit'
+// import { fetchImg, preview, readFile, loadImg } from '../../../ImgEdit/src/Utils'
 import message from 'jmessage'
 import SparkMD5 from 'spark-md5'
 import Btn from '../components/Btn'
@@ -125,7 +126,7 @@ export default {
       state: {
         width: 0,
         height: 0,
-        scale: 0,
+        ratio: 0,
         range: {
           x: 0,
           y: 0,
@@ -137,30 +138,25 @@ export default {
     }
   },
   mounted () {
-    edit = new ImgEdit({
-      canvas: '#canvas',
-      width: 800,
-      height: 600,
-      before: (context) => {
-        const canvas = context.canvas
-        const bgSize = 10
-        const xs = Math.ceil(canvas.width / bgSize) // 画canvas背景x轴循环次数
-        const ys = Math.ceil(canvas.height / bgSize) // 画canvas背景y轴循环次数
-        const color1 = '#ccc'
-        const color2 = '#eee' // 画布和图片的比例
-        for (let y = 0; y < ys; ++y) {
-          let color = y % 2 ? color1 : color2
-          for (let x = 0; x < xs; ++x) {
-            context.fillStyle = color
-            context.fillRect(x * bgSize, y * bgSize, bgSize, bgSize)
-            color = color === color1 ? color2 : color1
-          }
+    edit = new Editor('#canvas')
+    edit.canvas.width = 800;
+    edit.canvas.height = 600;
+    edit.before = (context) => {
+      const canvas = context.canvas
+      const bgSize = 10
+      const xs = Math.ceil(canvas.width / bgSize) // 画canvas背景x轴循环次数
+      const ys = Math.ceil(canvas.height / bgSize) // 画canvas背景y轴循环次数
+      const color1 = '#ccc'
+      const color2 = '#eee' // 画布和图片的比例
+      for (let y = 0; y < ys; ++y) {
+        let color = y % 2 ? color1 : color2
+        for (let x = 0; x < xs; ++x) {
+          context.fillStyle = color
+          context.fillRect(x * bgSize, y * bgSize, bgSize, bgSize)
+          color = color === color1 ? color2 : color1
         }
-      }/* ,
-      after: () => {
-        message.toast('after')
-      } */
-    })
+      }
+    }
     const inputRange = document.getElementById('input_range')
     let elemetnNode = null
     inputRange.addEventListener('dragenter', e => {
@@ -190,14 +186,14 @@ export default {
       e.target.value = ''
       // this.add(e.target.files[0])
     })
-    edit.onChange((state) => {
+    edit.onChange = (state) => {
       // console.log('edit.onChange', state)
       Object.assign(this.state, state)
-    })
+    }
     window.addEventListener('resize', throttle(() => {
       if (this.fileListIndex > -1) {
-        const width = getWidth('#draw_range .modal-body')
-        edit.canvasResize(width, (width / ratio) >> 0)
+        // const width = getWidth('#draw_range .modal-body')
+        // edit.canvasResize(width, (width / ratio) >> 0)
       }
     }, 200))
     /* loadImg('https://t12.baidu.com/it/u=54104471,2172971201&fm=76').then((img) => {
@@ -254,7 +250,7 @@ export default {
           message.toast('只能上传图片')
           return false
         }
-        const maxSize = 500 * 1024 // 500KB
+        const maxSize = 1000 * 1024 // 500KB
         if (file.size > maxSize) {
           this.fileList.push({
             name: file.name,
@@ -331,6 +327,7 @@ export default {
     open (index) {
       const file = fileStore[this.fileList[index].md5]
       if (!file) {
+        console.log(fileStore, this.fileList[index].md5)
         message.toast('编辑器打开错误')
         return
       }
@@ -344,7 +341,7 @@ export default {
       })
     },
     close (index) {
-      edit.close()
+      edit.clean()
       this.isShow = false
       this.fileListIndex = -1
     },
@@ -366,7 +363,7 @@ export default {
       edit.rotate(deg)
     },
     cut () {
-      edit.cut()
+      edit.crop()
     },
     resize () {
       edit.resize(this.width, this.height)
@@ -412,14 +409,14 @@ export default {
         }
       })
     },
-    preview (index) {
+    async preview (index) {
       if (index < 0) {
-        loadImg(edit.toDataURL('image/png')).then((img) => {
-          const box = message.pop().append(img)
-          window.setTimeout(() => {
-            box.center()
-          }, 0)
-        })
+        const src = await edit.toDataURL('image/png')
+        const img = await loadImg(src)
+        const box = message.pop().append(img)
+        window.setTimeout(() => {
+          box.center()
+        }, 0)
         return
       }
       const file = fileStore[this.fileList[index].md5]
